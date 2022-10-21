@@ -1,26 +1,42 @@
 version: '3.8'
 
-services:
-  database:
-    image: postgres
-    container_name: database
-    restart: unless-stopped
-    environment:
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: laravel_docker
-    volumes:
-      - ./postgres-data:/var/lib/postgresql/data
-    ports:
-      - '5432:5432'
+networks:
+    nginx-php8-database:
 
-  php-apache:
-    container_name: php-apache
-    build:
-      context: ./php
-    ports:
-      - '8080:80'
-    volumes:
-      - ./src:/var/www/laravel_docker
-      - ./apache/default.conf:/etc/apache2/sites-enabled/000-default.conf
-    depends_on:
-      - database
+services:
+    nginx-service:
+        image: nginx:stable-alpine
+        container_name: nginx
+        ports:
+            - "8080:80"
+        volumes:
+            - ./src:/var/www/project
+            - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+        depends_on:
+            - php8-service
+            - database-service
+        networks:
+            - nginx-php8-database
+
+    php8-service:
+        container_name: php8
+        build:
+            context: ./php
+        volumes:
+            - ./src:/var/www/project
+        networks:
+            - nginx-php8-database
+
+    database-service:
+        image: postgres
+        container_name: database
+        restart: unless-stopped
+        environment:
+            POSTGRES_PASSWORD: secret
+            POSTGRES_DB: laravel_docker
+        volumes:
+            - ./postgres-data:/var/lib/postgresql/data
+        ports:
+            - '5432:5432'
+        networks:
+            - nginx-php8-database
